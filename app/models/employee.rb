@@ -63,4 +63,62 @@ class Employee < ApplicationRecord
     puts 'Employee total records:'
     puts Employee.count
   end
+
+
+  def self.populate3
+    myfile = Rails.root.join('docs', 'employee_array.txt')
+    p_bar = ProgressBar.create(title: 'EMPLOYEE', starting_at: 0, total: myfile.each_line.count, format: ' %P%: %e (%c/%C): %t')
+    counter = 1
+    batch = []
+
+    CSV.foreach(myfile) do |line|
+
+      record = {
+        surname: line[0].to_s,
+        first_name: line[1].to_s,
+        address: line[2].delete("{'}").split(","),
+        emails: line[3].delete("{'}").split(","),
+        created_at: Time.now,
+        updated_at: Time.now
+      }
+      byebug
+
+      batch << record
+
+      # when batch size is multiple of 30, save it to DB
+      if counter % 30 == 0
+        # byebug
+        begin
+          Rails.logger do
+            logger.debug 'Showing batch: ' + @batch
+            result = Employee.insert_all!(batch)
+          end
+          batch = []
+        rescue StandardError
+          puts '### save error ###'
+          puts result
+          batch = []
+        end
+      end
+
+      counter += 1
+      p_bar.increment
+    end # each_line
+
+    # save last batch
+    begin
+      Rails.logger do
+        result = Employee.insert_all!(batch)
+      end
+    rescue StandardError
+      puts '### save error ###'
+      puts result
+    end
+    puts 'Employee total records:'
+    puts Employee.count
+  end
+
+
+
+
 end
